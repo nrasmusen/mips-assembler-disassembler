@@ -1,0 +1,3 @@
+# Machine-code files must be stored byte-for-byte (no line-ending conversion)
+*.mhc-bin   binary
+*.mhc-ascii -text

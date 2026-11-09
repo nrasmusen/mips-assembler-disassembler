@@ -1,0 +1,428 @@
+Test run: 2026-11-08 20:03
+Java: java version "24.0.2" 2025-07-15
+
+======================================================================
+1. Build
+======================================================================
+> javac -d build src/AsmException.java src/MipsIsa.java src/Assembler.java src/Disassembler.java src/AssemblerSelfTest.java
+    (exit code 0)
+PASS  all sources compile
+
+======================================================================
+2. Unit self-tests (encoders and assembler helpers)
+======================================================================
+> java -cp build MipsIsa
+    PASS  addi $t0, $zero, 3                   got 0x20080003  expected 0x20080003
+    PASS  addi $t1, $zero, 5                   got 0x20090005  expected 0x20090005
+    PASS  add  $t2, $t0, $t1                   got 0x01095020  expected 0x01095020
+    PASS  sub  $t3, $t1, $t0                   got 0x01285822  expected 0x01285822
+    PASS  bne with offset -1 (negative imm)    got 0x1528FFFF  expected 0x1528FFFF
+    PASS  j 0x00400010                         got 0x08100004  expected 0x08100004
+    (exit code 0)
+PASS  MipsIsa encoders match the hand-assembled Part 1 answers
+> java -cp build AssemblerSelfTest
+    branchOffset backward (bne -> loop)            PASS  got -4 (0xFFFFFFFC)  expected -4 (0xFFFFFFFC)
+    branchOffset forward (beq -> PrintFizzBuzz)    PASS  got 9 (0x00000009)  expected 9 (0x00000009)
+    jumpField (j PrintItem)                        PASS  got 1048583 (0x00100007)  expected 1048583 (0x00100007)
+    expandLi (li $t1, 1)                           PASS  got [ 0x24090001 ]  expected [ 0x24090001 ]
+    expandMove (move $a0, $t1)                     PASS  got [ 0x00092021 ]  expected [ 0x00092021 ]
+    expandLa (la $a0, fizzBuzz)                    PASS  got [ 0x3C011001 0x3424000A ]  expected [ 0x3C011001 0x3424000A ]
+    
+    All passed.
+    (exit code 0)
+PASS  branch/jump math and pseudoinstruction expansions
+
+======================================================================
+3. Part 1 instructions through the assembler
+======================================================================
+> java -cp build Assembler tests/part1.asm out/part1 --list
+    Address     Machine code  Source
+    0x00400000  0x20080003    addi $t0, $zero, 3
+    0x00400004  0x20090005    addi $t1, $zero, 5
+    0x00400008  0x01095020    add  $t2, $t0, $t1
+    0x0040000C  0x01285822    sub  $t3, $t1, $t0
+    Assembled 4 instructions (16 bytes) + 0 data bytes
+      out\part1.mhc-ascii  (297 bytes)
+      out\part1.mhc-bin  (36 bytes)
+    (exit code 0)
+PASS  assembler output equals hand assembly (20080003 20090005 01095020 01285822)
+
+======================================================================
+4. Assemble FizzBuzz (Part 3)
+======================================================================
+> java -cp build Assembler fizzBuzzMIPS.asm out/fizzbuzz --list
+    Address     Machine code  Source
+    0x00400000  0x24090001    li $t1, 1
+    0x00400004  0x24080065    li $t0, 101
+    0x00400008  0x08100007    j PrintItem
+    0x0040000C  0x08100027    j PrintNewLine
+    0x00400010  0x21290001    addi $t1, $t1, 1
+    0x00400014  0x1528FFFC    bne $t1, $t0, loop
+    0x00400018  0x0810002B    j Exit
+    0x0040001C  0x240A000F    li $t2, 15
+    0x00400020  0x012A001A    div $t1, $t2
+    0x00400024  0x00005810    mfhi $t3
+    0x00400028  0x11600009    beq $t3, $zero, PrintFizzBuzz
+    0x0040002C  0x240A0003    li $t2, 3
+    0x00400030  0x012A001A    div $t1, $t2
+    0x00400034  0x00005810    mfhi $t3
+    0x00400038  0x1160000A    beq $t3, $zero, PrintFizz
+    0x0040003C  0x240A0005    li $t2, 5
+    0x00400040  0x012A001A    div $t1, $t2
+    0x00400044  0x00005810    mfhi $t3
+    0x00400048  0x1160000B    beq $t3, $zero, PrintBuzz
+    0x0040004C  0x08100023    j PrintInt
+    0x00400050  0x24020004    li $v0, 4
+    0x00400054  0x3C011001    la $a0, fizzBuzz
+    0x00400058  0x3424000A      (cont.)
+    0x0040005C  0x0000000C    syscall
+    0x00400060  0x08100003    j PrintItemEnd
+    0x00400064  0x24020004    li $v0, 4
+    0x00400068  0x3C011001    la $a0, fizz
+    0x0040006C  0x34240000      (cont.)
+    0x00400070  0x0000000C    syscall
+    0x00400074  0x08100003    j PrintItemEnd
+    0x00400078  0x24020004    li $v0, 4
+    0x0040007C  0x3C011001    la $a0, buzz
+    0x00400080  0x34240005      (cont.)
+    0x00400084  0x0000000C    syscall
+    0x00400088  0x08100003    j PrintItemEnd
+    0x0040008C  0x24020001    li $v0, 1
+    0x00400090  0x00092021    move $a0, $t1
+    0x00400094  0x0000000C    syscall
+    0x00400098  0x08100003    j PrintItemEnd
+    0x0040009C  0x2404000A    li $a0, '\n'
+    0x004000A0  0x2402000B    li $v0, 11
+    0x004000A4  0x0000000C    syscall
+    0x004000A8  0x08100004    j PrintNewLineEnd
+    0x004000AC  0x2402000A    li $v0, 10
+    0x004000B0  0x0000000C    syscall
+    Assembled 45 instructions (180 bytes) + 19 data bytes
+      out\fizzbuzz.mhc-ascii  (1821 bytes)
+      out\fizzbuzz.mhc-bin  (219 bytes)
+    (exit code 0)
+PASS  fizzBuzzMIPS.asm assembles
+PASS  out/fizzbuzz.mhc-ascii exists
+PASS  out/fizzbuzz.mhc-bin exists
+Sizes: mhc-ascii = 1821 bytes, mhc-bin = 219 bytes
+PASS  mhc-ascii contains only '0', '1', and line breaks
+PASS  mhc-ascii has exactly 8 characters per mhc-bin byte (1752 = 8 x 219)
+
+======================================================================
+5. Disassemble BOTH formats (Part 4)
+======================================================================
+> java -cp build Disassembler out/fizzbuzz.mhc-bin out/fizzbuzz_reconstructed.asm
+    Disassembled 45 instructions + 19 data bytes (mhc-bin format) -> out\fizzbuzz_reconstructed.asm
+    (exit code 0)
+PASS  disassemble mhc-bin
+> java -cp build Disassembler out/fizzbuzz.mhc-ascii out/fizzbuzz_reconstructed_from_ascii.asm
+    Disassembled 45 instructions + 19 data bytes (mhc-ascii format) -> out\fizzbuzz_reconstructed_from_ascii.asm
+    (exit code 0)
+PASS  disassemble mhc-ascii
+PASS  both formats produce the same assembly
+
+======================================================================
+6. Reassemble the reconstructed program: bytes must match
+======================================================================
+> java -cp build Assembler out/fizzbuzz_reconstructed.asm out/reassembled
+    Assembled 45 instructions (180 bytes) + 19 data bytes
+      out\reassembled.mhc-ascii  (1821 bytes)
+      out\reassembled.mhc-bin  (219 bytes)
+    (exit code 0)
+PASS  reconstructed program assembles
+PASS  reassembled mhc-bin is byte-identical to the original
+PASS  reassembled mhc-ascii is identical to the original
+
+======================================================================
+7. MARS: same FizzBuzz output and same machine code
+======================================================================
+> java -jar Mars4_5.jar nc fizzBuzzMIPS.asm
+    1
+    2
+    Fizz
+    4
+    Buzz
+    Fizz
+    7
+    8
+    Fizz
+    Buzz
+    11
+    Fizz
+    13
+    14
+    FizzBuzz
+    16
+    17
+    Fizz
+    19
+    Buzz
+    Fizz
+    22
+    23
+    Fizz
+    Buzz
+    26
+    Fizz
+    28
+    29
+    FizzBuzz
+    31
+    32
+    Fizz
+    34
+    Buzz
+    Fizz
+    37
+    38
+    Fizz
+    Buzz
+    41
+    Fizz
+    43
+    44
+    FizzBuzz
+    46
+    47
+    Fizz
+    49
+    Buzz
+    Fizz
+    52
+    53
+    Fizz
+    Buzz
+    56
+    Fizz
+    58
+    59
+    FizzBuzz
+    61
+    62
+    Fizz
+    64
+    Buzz
+    Fizz
+    67
+    68
+    Fizz
+    Buzz
+    71
+    Fizz
+    73
+    74
+    FizzBuzz
+    76
+    77
+    Fizz
+    79
+    Buzz
+    Fizz
+    82
+    83
+    Fizz
+    Buzz
+    86
+    Fizz
+    88
+    89
+    FizzBuzz
+    91
+    92
+    Fizz
+    94
+    Buzz
+    Fizz
+    97
+    98
+    Fizz
+    Buzz
+    
+    (exit code 0)
+> java -jar Mars4_5.jar nc out/fizzbuzz_reconstructed.asm
+    1
+    2
+    Fizz
+    4
+    Buzz
+    Fizz
+    7
+    8
+    Fizz
+    Buzz
+    11
+    Fizz
+    13
+    14
+    FizzBuzz
+    16
+    17
+    Fizz
+    19
+    Buzz
+    Fizz
+    22
+    23
+    Fizz
+    Buzz
+    26
+    Fizz
+    28
+    29
+    FizzBuzz
+    31
+    32
+    Fizz
+    34
+    Buzz
+    Fizz
+    37
+    38
+    Fizz
+    Buzz
+    41
+    Fizz
+    43
+    44
+    FizzBuzz
+    46
+    47
+    Fizz
+    49
+    Buzz
+    Fizz
+    52
+    53
+    Fizz
+    Buzz
+    56
+    Fizz
+    58
+    59
+    FizzBuzz
+    61
+    62
+    Fizz
+    64
+    Buzz
+    Fizz
+    67
+    68
+    Fizz
+    Buzz
+    71
+    Fizz
+    73
+    74
+    FizzBuzz
+    76
+    77
+    Fizz
+    79
+    Buzz
+    Fizz
+    82
+    83
+    Fizz
+    Buzz
+    86
+    Fizz
+    88
+    89
+    FizzBuzz
+    91
+    92
+    Fizz
+    94
+    Buzz
+    Fizz
+    97
+    98
+    Fizz
+    Buzz
+    
+    (exit code 0)
+PASS  original runs in MARS
+PASS  reconstructed runs in MARS
+PASS  reconstructed program prints exactly the same output as the original
+> java -jar Mars4_5.jar nc a dump .text HexText out/mars_text.txt fizzBuzzMIPS.asm
+    (exit code 0)
+PASS  our .text words equal MARS's own assembly (45 words)
+
+======================================================================
+8. Invalid input produces useful errors
+======================================================================
+> java -cp build Assembler tests/bad/bad_register.asm out/bad
+    bad_register.asm:2: error: unknown register '$t10'
+        addi $t0, $t10, 3
+    (exit code 1)
+PASS  assembler rejects bad_register.asm with an error message
+> java -cp build Assembler tests/bad/duplicate_label.asm out/bad
+    duplicate_label.asm:4: error: duplicate label 'loop'
+        loop:
+    (exit code 1)
+PASS  assembler rejects duplicate_label.asm with an error message
+> java -cp build Assembler tests/bad/immediate_out_of_range.asm out/bad
+    immediate_out_of_range.asm:2: error: value 70000 is out of range for 'addi' (-32768 to 32767)
+        addi $t0, $zero, 70000
+    (exit code 1)
+PASS  assembler rejects immediate_out_of_range.asm with an error message
+> java -cp build Assembler tests/bad/instruction_in_data.asm out/bad
+    instruction_in_data.asm:2: error: instruction 'addi' is in the .data segment (add .text before it)
+        addi $t0, $zero, 1
+    (exit code 1)
+PASS  assembler rejects instruction_in_data.asm with an error message
+> java -cp build Assembler tests/bad/undefined_label.asm out/bad
+    undefined_label.asm:2: error: undefined label 'Nowhere'
+        j Nowhere
+    (exit code 1)
+PASS  assembler rejects undefined_label.asm with an error message
+> java -cp build Assembler tests/bad/unsupported_directive.asm out/bad
+    unsupported_directive.asm:2: error: unsupported directive '.word' (supported: .text, .data, .ascii, .asciiz, .byte, .globl)
+        nums: .word 1, 2, 3
+    (exit code 1)
+PASS  assembler rejects unsupported_directive.asm with an error message
+> java -cp build Assembler tests/bad/unsupported_instruction.asm out/bad
+    unsupported_instruction.asm:2: error: unsupported instruction 'mul'
+        mul $t0, $t1, $t2
+    (exit code 1)
+PASS  assembler rejects unsupported_instruction.asm with an error message
+> java -cp build Assembler tests/bad/unterminated_string.asm out/bad
+    unterminated_string.asm:2: error: missing closing " in "Fizz
+        msg: .asciiz "Fizz
+    (exit code 1)
+PASS  assembler rejects unterminated_string.asm with an error message
+> java -cp build Assembler tests/bad/wrong_operand_count.asm out/bad
+    wrong_operand_count.asm:2: error: 'add' expects 3 operands (rd, rs, rt) but got 2
+        add $t0, $t1
+    (exit code 1)
+PASS  assembler rejects wrong_operand_count.asm with an error message
+> java -cp build Disassembler tests/bad/bad_character.mhc-ascii out/bad.asm
+    bad_character.mhc-ascii:2: error: not a valid mhc file: found '2' (an mhc-ascii file may only contain 0, 1, and whitespace; an mhc-bin file must start with "MHC1")
+    (exit code 1)
+PASS  disassembler rejects bad_character.mhc-ascii with an error message
+> java -cp build Disassembler tests/bad/not_machine_code.mhc-bin out/bad.asm
+    not_machine_code.mhc-bin:1: error: not a valid mhc file: found 'h' (an mhc-ascii file may only contain 0, 1, and whitespace; an mhc-bin file must start with "MHC1")
+    (exit code 1)
+PASS  disassembler rejects not_machine_code.mhc-bin with an error message
+> java -cp build Disassembler tests/bad/partial_byte.mhc-ascii out/bad.asm
+    partial_byte.mhc-ascii: error: mhc-ascii file has 36 bits, which is not a whole number of bytes (must be a multiple of 8)
+    (exit code 1)
+PASS  disassembler rejects partial_byte.mhc-ascii with an error message
+> java -cp build Disassembler tests/bad/truncated.mhc-bin out/bad.asm
+    truncated.mhc-bin: error: header says 219 bytes total but the file has 40 (file is truncated)
+    (exit code 1)
+PASS  disassembler rejects truncated.mhc-bin with an error message
+> java -cp build Disassembler tests/bad/unknown_opcode.mhc-bin out/bad.asm
+    unknown_opcode.mhc-bin: error: unsupported instruction word 0xFC000000 at 0x00400000 (opcode 0x3F)
+    (exit code 1)
+PASS  disassembler rejects unknown_opcode.mhc-bin with an error message
+> java -cp build Assembler does_not_exist.asm
+    error: file not found: does_not_exist.asm
+    (exit code 1)
+PASS  assembler reports a missing input file
+
+======================================================================
+Summary
+======================================================================
+ALL CHECKS PASSED

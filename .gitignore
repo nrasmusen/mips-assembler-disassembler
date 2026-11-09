@@ -1,0 +1,36 @@
+# Assignment specs and private working notes (not for the public portfolio)
+SPECS.md
+PLAN.md
+
+# Course submission: the report PDF and the script/HTML that build it
+report/
+
+# A different project's report
+MIPSGames.pdf
+
+# MARS simulator jar (download it separately; see README)
+Mars*.jar
+
+# Java build output
+build/
+*.class
+
+# Intermediate files that run_tests.ps1 regenerates (the main outputs stay tracked:
+# out/fizzbuzz.mhc-ascii, out/fizzbuzz.mhc-bin, out/fizzbuzz_reconstructed.asm)
+out/reassembled.*
+out/fizzbuzz_reconstructed_from_ascii.asm
+out/mars_text.txt
+out/part1.*
+out/bad.*
+
+# Editor / OS clutter
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python (any helper scripts)
+__pycache__/
+*.pyc
